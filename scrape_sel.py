@@ -50,21 +50,12 @@ def extract_papers_selenium(url):
         try:
            #breakpoint()
            subdriver.get(forum_link)
-           #time.sleep(3)
-           #abstract = "TO DO: write a function for this"
-           # Wait until the abstract element is available
-           #element_present = EC.presence_of_element_located((By.XPATH, '//div[@class="note-content"]/div/strong[text()="Abstract:"]/following-sibling::span'))
-           #WebDriverWait(subdriver, 10).until(element_present)
-           # TODO: the following does not correctly pull out the abstract
-           #abstract_text = subdriver.find_element(By.XPATH, '//strong[text()="Abstract:"]/following-sibling::*').text
-           #abstract_span = subdriver.find_element(By.XPATH, '//strong[text()="Abstract:"]/following-sibling::span[1]')
-           #abstract_text = abstract_span.text.strip()
-           #abstract_text = subdriver.find_element(By.XPATH, '//div[@class="note-content"]/div/strong[text()="Abstract:"]/following-sibling::span').text
+           # TODO:  Tried to get selenium to correctly parse abstracts, but the dynamic content 
+           # on OpenReview is not easy to deal with.  I fell back to old-school regex manipulations.
            time.sleep(5)
            page_source = subdriver.page_source
            abstract_idx = page_source.find("Abstract:")
            abstract_text = page_source[abstract_idx+10:page_source.find("</div", abstract_idx)]
-           #pdb.set_trace()
            subdriver.quit()
         except:
            abstract_text = "Abstract retrieval failed"
