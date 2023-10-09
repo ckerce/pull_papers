@@ -6,6 +6,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 import pdb
+import re
+import json
 
 def extract_papers_selenium(url):
     # Initialize the Chrome WebDriver
@@ -76,17 +78,26 @@ def extract_papers_selenium(url):
     
     return extracted_items
 
-# URL of the webpage to scrape
 
-search_term="logic"
-for k in range(1,10):
-   url = "https://openreview.net/search?content=all&group=ICLR.cc&page="+str(k)+"&source=forum&term="+search_term
-   #url = "https://openreview.net/search?content=all&group=NeurIPS.cc&page="+str(k)+"&source=forum&term="+search_term
-   
-   # Extract items from the webpage
-   extracted_items = extract_papers_selenium(url)
-   
-   # Print the extracted items
-   for item in extracted_items:
-       print(item)
+if __name__ == '__main__': 
+   #search_term="logic"
+   MAX_PAGE_LIMIT = 50 
+   results = []
+   for k in range(1,MAX_PAGE_LIMIT):
+      url = "https://openreview.net/search?content=keywords&group=all&page="+str(k)+"&source=all&term=adversarial"
+      #url = "https://openreview.net/search?content=all&group=ICLR.cc&page="+str(k)+"&source=forum&term="+search_term
+      #url = "https://openreview.net/search?content=all&group=NeurIPS.cc&page="+str(k)+"&source=forum&term="+search_term
+      
+      # Extract items from the webpage
+      extracted_items = extract_papers_selenium(url)
 
+      if not extracted_items:
+          break
+      
+      # Print the extracted items
+      #for item in extracted_items:
+      #    print(item)
+
+      results += extracted_items
+
+print(json.dumps(results))
