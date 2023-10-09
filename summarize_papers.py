@@ -12,14 +12,46 @@ import html2text
 MAX_CHAR = 3092+250
 count = 0
 total = len(dat)
+FIX_ABSTRACT='True'
+bad_abstracts = []
 for d in dat:
+    # The text processing agent's task
     inp_str = instruction + "TITLE: " + d['title'] + "\nABSTRACT: " + html2text.html2text(d['abstract']) + "\nSUMMARY: " 
-    cur_len = min(len(inp_str), 3300)
+
+    # Check for overflow to the model, and give a warning.  LLama2 has a 4092 context window
+    cur_len = min(len(inp_str), 3500)
     if len(inp_str) > MAX_CHAR:
         print('LONG ABSTRACT: ' + d['title'])
-    ans = pipe(inp_str[0:curlen], max_length=cur_len, eos_token_id=tokenizer.eos_token_id)
-    d['abstract'] = ans[0]['generated_text'][len(inp_str)+1:].strip('\n')
-    print(str(count) + '/' + str(total) + ' -- ' + d['title'])
+
+    # Trim input to context window and execute the task.
+    clip_str = inp_str[0:cur_len]
+
+    abstract_pass = 0
+    while FIX_ABSTRACT:
+        ans = pipe(clip_str, max_length=cur_len, eos_token_id=tokenizer.eos_token_id)
+
+        potential_abstract = ans[0]['generated_text'][len(clip_str)+1:].strip('\n')
+        check_instruction = "Examine the following text and assess whether or not it needs to be adjusted for grammer or extraneous characters. Return either a YES or NO answer with absolutely no other information.  Your reply should either be 'ANSWER: YES' or 'ANSWER: NO'."
+        inp_check = check_instruction + potential_abstract
+        assessment = pipe( inp_check, max_length = len(inp_check)+15, eos_token_id=tokenizer.eos_token_id) 
+        yesno = assessment[0]['generated_text'][len(inp_check)+1:]
+
+        # If new abstract looks good, replace the original abstract with the new abstract. Else do nothing.
+        if not re.search(r'\bNO\b', yesno):
+           d['abstract'] = potential_abstract
+           print(str(count) + '/' + str(total) + ' -- ' + d['title'])
+           FIX_ABSTRACT = 'False'
+           break
+        else:
+           print(str(count) + '/' + str(total) + ' ERROR.  ABSTRACT UNALTERED. ' )
+
+        if abstract_pass > 2:
+            FIX_ABSTRACT='False'
+            bad_abstracts.append(count)
+            break
+        abstract_pass += 1
+
+    # Progress indicator
     count += 1
 
 
@@ -31,11 +63,23 @@ for d in dat:
 
 instruction = "INSTRUCTION: Provide a detailed summary of the following abstract in 500 words or less, retaining as much of the original natural english text as possible: \n\n"
 
+instruction = "Examine the following text and assess whether or not it needs to be adjusted for grammer or extraneous characters. Return either a YES or NO answer with absolutely no other information.  Your reply should either be 'ANSWER: YES' or 'ANSWER: NO'."
+
+
 ####################################################################################
 #
 #
 #
 ####################################################################################
+
+
+field_names = ["title", "authors", "Conference", "date", "link", "abstract"]
+with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
+    writer = csv.DictWriter(file, fieldnames=field_names)
+    writer.writeheader()
+    for paper in papers:
+        writer.writerow(paper)
+
 
 
 def dat2csv(dat, filename):
